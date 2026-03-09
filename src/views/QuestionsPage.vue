@@ -73,7 +73,7 @@
       <div v-else>
         <QuestionCard
           v-for="question in filteredQuestions"
-          :key="question.id"
+          :key="question.firebaseKey || question.id"
           :question="question"
           @edit="editQuestion"
           @delete="deleteQuestion"
@@ -379,12 +379,18 @@ export default {
           await questionsStore.addQuestion(questionData);
         }
 
-        // إغلاق Modal
-        const modal = document.getElementById("questionModal");
-        const bootstrapModal = bootstrap.Modal.getInstance(modal);
-        if (bootstrapModal) {
-          bootstrapModal.hide();
+        // إغلاق Modal أولاً
+        try {
+          const modal = document.getElementById("questionModal");
+          const bootstrapModal = bootstrap.Modal.getInstance(modal);
+          if (bootstrapModal) {
+            bootstrapModal.hide();
+          }
+        } catch (modalError) {
+          // تجاهل أخطاء الـ Modal
         }
+
+        // ثم إعادة تعيين النموذج
         resetForm();
       } catch (error) {
         console.error("Error saving question:", error);

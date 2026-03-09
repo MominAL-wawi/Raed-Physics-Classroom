@@ -84,7 +84,7 @@
               <tbody>
                 <tr
                   v-for="(student, index) in filteredStudents"
-                  :key="student.id"
+                  :key="student.firebaseKey || student.id"
                 >
                   <td>{{ index + 1 }}</td>
                   <td>
@@ -255,13 +255,15 @@
 <script>
 import { ref, computed, onMounted } from "vue";
 import { useAuthStore } from "@/store/authStore";
+import { storeToRefs } from "pinia";
 
 export default {
   name: "AdminDashboard",
   setup() {
     const authStore = useAuthStore();
+    // استخدام storeToRefs للحصول على reference تفاعلي مباشر من الـ store
+    const { students } = storeToRefs(authStore);
 
-    const students = ref([]);
     const searchQuery = ref("");
     const showAddModal = ref(false);
     const showDeleteModal = ref(false);
@@ -289,13 +291,12 @@ export default {
     const todayStudents = computed(() => {
       const today = new Date().toDateString();
       return students.value.filter(
-        (s) => new Date(s.createdAt).toDateString() === today
+        (s) => s.createdAt && new Date(s.createdAt).toDateString() === today
       ).length;
     });
 
     const loadStudents = async () => {
       await authStore.loadStudents();
-      students.value = authStore.getStudents();
     };
 
     const formatDate = (dateString) => {
@@ -325,8 +326,7 @@ export default {
         } else {
           await authStore.addStudent(studentForm.value);
         }
-
-        await loadStudents();
+        // لا نحتاج loadStudents لأن الـ store يحدث محلياً مباشرة
         closeModal();
       } catch (error) {
         console.error("Error saving student:", error);
@@ -355,7 +355,7 @@ export default {
           await authStore.deleteStudent(
             studentToDelete.value.firebaseKey || studentToDelete.value.id
           );
-          await loadStudents();
+          // لا نحتاج loadStudents لأن الـ store يحدث محلياً مباشرة
         } catch (error) {
           console.error("Error deleting student:", error);
         }

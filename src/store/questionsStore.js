@@ -32,25 +32,22 @@ export const useQuestionsStore = defineStore("questions", {
     },
 
     async addQuestion(question) {
-      console.log("[v0] addQuestion called with:", question);
       try {
         const newQuestion = {
           id: Date.now().toString(),
           createdAt: new Date().toISOString(),
           ...question,
         };
-        console.log("[v0] Sending to Firebase:", newQuestion);
         const firebaseKey = await firebaseDB.post(
           DB_PATHS.QUESTIONS,
           newQuestion
         );
-        console.log("[v0] Firebase returned key:", firebaseKey);
         const questionWithKey = { ...newQuestion, firebaseKey };
+        // إضافة العنصر محليًا مباشرة بعد الحفظ
         this.questions.push(questionWithKey);
-        console.log("[v0] Question added successfully");
         return questionWithKey;
       } catch (error) {
-        console.error("[v0] Error adding question:", error);
+        console.error("Error adding question:", error);
         throw error;
       }
     },

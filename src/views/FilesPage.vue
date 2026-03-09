@@ -67,7 +67,11 @@
       </div>
 
       <div v-else class="row">
-        <div v-for="file in filteredFiles" :key="file.id" class="col-md-6 mb-3">
+        <div
+          v-for="file in filteredFiles"
+          :key="file.firebaseKey || file.id"
+          class="col-md-6 mb-3"
+        >
           <FileCard
             :file="file"
             :show-delete="isTeacher"
@@ -289,13 +293,18 @@ export default {
 
         await filesStore.addFile(fileData);
 
-        // إغلاق Modal وإعادة تعيين النموذج
-        const modal = document.getElementById("uploadModal");
-        const bootstrapModal = bootstrap.Modal.getInstance(modal);
-        if (bootstrapModal) {
-          bootstrapModal.hide();
+        // إغلاق Modal أولاً
+        try {
+          const modal = document.getElementById("uploadModal");
+          const bootstrapModal = bootstrap.Modal.getInstance(modal);
+          if (bootstrapModal) {
+            bootstrapModal.hide();
+          }
+        } catch (modalError) {
+          // تجاهل أخطاء الـ Modal
         }
 
+        // ثم إعادة تعيين النموذج
         uploadForm.value = {
           name: "",
           type: "pdf",

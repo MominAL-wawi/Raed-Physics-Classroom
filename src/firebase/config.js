@@ -39,22 +39,20 @@ export const firebaseDB = {
 
   // POST - Create new data with auto-generated key
   async post(path, data) {
-    console.log("[v0] Firebase POST starting:", path);
     try {
       const url = buildUrl(path);
-      console.log("[v0] Firebase POST URL:", url);
       const response = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      console.log("[v0] Firebase POST response status:", response.status);
-      if (!response.ok) throw new Error("Failed to create data");
+      if (!response.ok) {
+        throw new Error(`Failed to create data: ${response.status}`);
+      }
       const result = await response.json();
-      console.log("[v0] Firebase POST result:", result);
       return result.name; // Returns the generated key
     } catch (error) {
-      console.error("[v0] Firebase POST error:", error);
+      console.error("Firebase POST error:", error);
       throw error;
     }
   },

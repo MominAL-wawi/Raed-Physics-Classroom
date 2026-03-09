@@ -48,10 +48,16 @@ export const useLinksStore = defineStore("links", () => {
 
       await newLinkRef.set(dataToAdd);
 
-      return {
+      const newLink = {
         id: newLinkRef.key,
         ...dataToAdd,
+        createdAt: new Date(dataToAdd.createdAt),
       };
+
+      // إضافة العنصر محليًا مباشرة بعد الحفظ
+      links.value.push(newLink);
+
+      return newLink;
     } catch (err) {
       console.error("خطأ في إضافة اللينك:", err);
       error.value = err.message;

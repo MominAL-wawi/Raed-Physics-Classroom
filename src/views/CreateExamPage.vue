@@ -184,20 +184,24 @@
                   >
                     <div
                       v-for="question in filteredQuestions"
-                      :key="question.id"
+                      :key="question.firebaseKey || question.id"
                       class="form-check question-select-item p-3 mb-2 rounded"
-                      :class="{ selected: isSelected(question.id) }"
+                      :class="{
+                        selected: isSelected(
+                          question.firebaseKey || question.id
+                        ),
+                      }"
                     >
                       <input
                         class="form-check-input"
                         type="checkbox"
-                        :id="'q-' + question.id"
-                        :value="question.id"
+                        :id="'q-' + (question.firebaseKey || question.id)"
+                        :value="question.firebaseKey || question.id"
                         v-model="selectedQuestions"
                       />
                       <label
                         class="form-check-label w-100"
-                        :for="'q-' + question.id"
+                        :for="'q-' + (question.firebaseKey || question.id)"
                       >
                         <div class="d-flex justify-content-between">
                           <span>{{ question.text }}</span>
@@ -355,7 +359,9 @@ export default {
       );
     });
 
-    const isSelected = (id) => selectedQuestions.value.includes(id);
+    const isSelected = (id) => {
+      return selectedQuestions.value.includes(id);
+    };
 
     // استخدام firebaseKey أو id
     /* const getQuestionIdentifier = (question) =>
