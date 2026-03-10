@@ -268,6 +268,26 @@ export default {
 
     const isUploading = ref(false);
 
+    const closeModal = () => {
+      const modalEl = document.getElementById("uploadModal");
+      if (modalEl) {
+        const bootstrapModal = bootstrap.Modal.getInstance(modalEl);
+        if (bootstrapModal) {
+          bootstrapModal.hide();
+        }
+        // إزالة backdrop يدوياً إذا بقي
+        setTimeout(() => {
+          const backdrop = document.querySelector(".modal-backdrop");
+          if (backdrop) {
+            backdrop.remove();
+          }
+          document.body.classList.remove("modal-open");
+          document.body.style.overflow = "";
+          document.body.style.paddingRight = "";
+        }, 300);
+      }
+    };
+
     const uploadFile = async () => {
       if (isUploading.value) return;
       isUploading.value = true;
@@ -293,16 +313,8 @@ export default {
 
         await filesStore.addFile(fileData);
 
-        // إغلاق Modal أولاً
-        try {
-          const modal = document.getElementById("uploadModal");
-          const bootstrapModal = bootstrap.Modal.getInstance(modal);
-          if (bootstrapModal) {
-            bootstrapModal.hide();
-          }
-        } catch (modalError) {
-          // تجاهل أخطاء الـ Modal
-        }
+        // إغلاق Modal
+        closeModal();
 
         // ثم إعادة تعيين النموذج
         uploadForm.value = {

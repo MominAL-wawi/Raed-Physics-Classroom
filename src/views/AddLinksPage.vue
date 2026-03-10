@@ -214,7 +214,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from "vue";
+import { ref, reactive, onMounted } from "vue";
 import { useLinksStore } from "@/store/linksStore";
 import { useAuthStore } from "@/store/authStore";
 
@@ -252,7 +252,7 @@ const submitForm = async () => {
 
     successMessage.value = "تم إضافة اللينك بنجاح!";
     resetForm();
-    await linksStore.fetchLinks();
+    // لا حاجة لإعادة جلب البيانات - الـ store يضيف العنصر محلياً
   } catch (err) {
     error.value = "حدث خطأ أثناء إضافة اللينك";
     console.error(err);
@@ -293,5 +293,7 @@ const formatDate = (date) => {
 };
 
 // جلب اللينكات عند التحميل
-linksStore.fetchLinks();
+onMounted(async () => {
+  await linksStore.fetchLinks();
+});
 </script>

@@ -292,21 +292,31 @@ export default {
       clearInterval(timerInterval.value);
       calculateScore();
 
-      // حفظ النتيجة
-      await examsStore.submitExamResult({
-        examId: exam.value.firebaseKey || exam.value.id,
-        examTitle: exam.value.title,
-        studentEmail: authStore.user.email,
-        studentName: authStore.user.name,
-        answers: answers.value,
-        score: score.value,
-        correctAnswers: correctAnswers.value,
-        totalQuestions: questions.value.length,
-      });
+      try {
+        // حفظ النتيجة
+        await examsStore.submitExamResult({
+          examId: exam.value.firebaseKey || exam.value.id,
+          examTitle: exam.value.title,
+          studentEmail: authStore.user.email,
+          studentName: authStore.user.name,
+          answers: answers.value,
+          score: score.value,
+          correctAnswers: correctAnswers.value,
+          totalQuestions: questions.value.length,
+        });
 
-      // عرض النتيجة
-      const modal = new bootstrap.Modal(document.getElementById("resultModal"));
-      modal.show();
+        // عرض النتيجة
+        const modalEl = document.getElementById("resultModal");
+        if (modalEl) {
+          const modal = new bootstrap.Modal(modalEl);
+          modal.show();
+        }
+      } catch (error) {
+        console.error("Error submitting exam:", error);
+        alert("حدث خطأ أثناء إرسال الامتحان. سيتم إعادة المحاولة.");
+        // إعادة المحاولة
+        setTimeout(() => submitExam(), 2000);
+      }
     };
 
     const startTimer = () => {

@@ -274,12 +274,81 @@ export const useExamsStore = defineStore("exams", {
     async saveOngoingExamsToFirebase() {
       try {
         // حفظ كل الامتحانات الجارية دفعة واحدة
-        const savePromises = Object.entries(this.ongoingExams).map(
-          ([key, value]) => firebaseDB.put(DB_PATHS.ONGOING_EXAMS, key, value)
+        const entries = Object.entries(this.ongoingExams);
+        if (entries.length === 0) return;
+
+        const savePromises = entries.map(([key, value]) =>
+          firebaseDB.put(DB_PATHS.ONGOING_EXAMS, key, value)
         );
         await Promise.all(savePromises);
       } catch (error) {
         console.error("Error saving ongoing exams:", error);
+        // لا نرمي الخطأ لتجنب كسر التطبيق
+      }
+    },
+
+    // حفظ امتحان واحد فقط بدلاً من الكل
+    async saveOneOngoingExam(examId, studentEmail) {
+      try {
+        const key = `${examId}_${studentEmail}`;
+        const examData = this.ongoingExams[key];
+        if (examData) {
+          await firebaseDB.put(DB_PATHS.ONGOING_EXAMS, key, examData);
+        }
+      } catch (error) {
+        console.error("Error saving ongoing exam:", error);
+      }
+    },
+
+    // حذف نتيجة واحدة
+    async deleteResult(firebaseKey) {
+      try {
+        await firebaseDB.delete(DB_PATHS.RESULTS, firebaseKey);
+        this.results = this.results.filter(
+          (r) => r.firebaseKey !== firebaseKey
+        );
+        return true;
+      } catch (error) {
+        console.error("Error deleting result:", error);
+        throw error;
+      }
+    },
+
+    // حذف جميع نتائج امتحان معين
+    async deleteResultsByExam(examId) {
+      try {
+        const examResults = this.results.filter((r) => r.examId === examId);
+        for (const result of examResults) {
+          if (result.firebaseKey) {
+            await firebaseDB.delete(DB_PATHS.RESULTS, result.firebaseKey);
+          }
+        }
+        this.results = this.results.filter((r) => r.examId !== examId);
+        return true;
+      } catch (error) {
+        console.error("Error deleting exam results:", error);
+        throw error;
+      }
+    },
+
+    // حذف جميع نتائج طالب معين
+    async deleteResultsByStudent(studentEmail) {
+      try {
+        const studentResults = this.results.filter(
+          (r) => r.studentEmail === studentEmail
+        );
+        for (const result of studentResults) {
+          if (result.firebaseKey) {
+            await firebaseDB.delete(DB_PATHS.RESULTS, result.firebaseKey);
+          }
+        }
+        this.results = this.results.filter(
+          (r) => r.studentEmail !== studentEmail
+        );
+        return true;
+      } catch (error) {
+        console.error("Error deleting student results:", error);
+        throw error;
       }
     },
   },

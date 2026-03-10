@@ -1,22 +1,41 @@
 <template>
-  <div class="dashboard-container">
+  <div class="dashboard-container py-4">
     <div class="container">
-      <h2 class="mb-4"><i class="bi bi-bar-chart me-2"></i>نتائج الطلاب</h2>
+      <h2 class="mb-4 page-title">
+        <i class="bi bi-bar-chart me-2"></i>نتائج الطلاب
+      </h2>
 
       <!-- فلتر حسب الامتحان -->
       <div class="section-card mb-4">
         <div class="card-body">
-          <label class="form-label">فلتر حسب الامتحان</label>
-          <select class="form-select" v-model="selectedExam">
-            <option value="">جميع الامتحانات</option>
-            <option
-              v-for="exam in examsStore.exams"
-              :key="exam.id"
-              :value="exam.id"
+          <div class="row align-items-end gap-3">
+            <div class="col-md-6">
+              <label class="form-label">فلتر حسب الامتحان</label>
+              <select class="form-select" v-model="selectedExam">
+                <option value="">جميع الامتحانات</option>
+                <option
+                  v-for="exam in examsStore.exams"
+                  :key="exam.id"
+                  :value="exam.id"
+                >
+                  {{ exam.title }}
+                </option>
+              </select>
+            </div>
+            <div
+              class="col-md-4"
+              v-if="selectedExam && filteredResults.length > 0"
             >
-              {{ exam.title }}
-            </option>
-          </select>
+              <button
+                class="btn btn-outline-danger"
+                @click="deleteAllExamResults"
+                :disabled="isDeleting"
+              >
+                <i class="bi bi-trash me-2"></i>
+                حذف جميع نتائج هذا الامتحان
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -44,13 +63,17 @@
                   <th>النتيجة</th>
                   <th>الإجابات الصحيحة</th>
                   <th>التاريخ</th>
+                  <th>إجراءات</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(result, index) in filteredResults" :key="result.id">
+                <tr
+                  v-for="(result, index) in filteredResults"
+                  :key="result.id || result.firebaseKey"
+                >
                   <td>{{ index + 1 }}</td>
                   <td>{{ result.studentName }}</td>
-                  <td>{{ result.studentEmail }}</td>
+                  <td class="email-cell">{{ result.studentEmail }}</td>
                   <td>{{ result.examTitle }}</td>
                   <td>
                     <span
@@ -63,7 +86,19 @@
                   <td>
                     {{ result.correctAnswers }} / {{ result.totalQuestions }}
                   </td>
-                  <td>{{ formatDate(result.submittedAt) }}</td>
+                  <td class="date-cell">
+                    {{ formatDate(result.submittedAt) }}
+                  </td>
+                  <td>
+                    <button
+                      class="btn btn-sm btn-outline-danger"
+                      @click="deleteResult(result)"
+                      :disabled="isDeleting"
+                      title="حذف النتيجة"
+                    >
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -114,6 +149,7 @@ export default {
   setup() {
     const examsStore = useExamsStore();
     const selectedExam = ref("");
+    const isDeleting = ref(false);
 
     // تحميل البيانات من Firebase عند تحميل الصفحة
     onMounted(async () => {
@@ -153,6 +189,46 @@ export default {
       });
     };
 
+    // حذف نتيجة واحدة
+    const deleteResult = async (result) => {
+      if (!confirm(`هل أنت متأكد من حذف نتيجة ${result.studentName}؟`)) return;
+
+      isDeleting.value = true;
+      try {
+        await examsStore.deleteResult(result.firebaseKey);
+      } catch (error) {
+        alert("حدث خطأ أثناء حذف النتيجة");
+      } finally {
+        isDeleting.value = false;
+      }
+    };
+
+    // حذف جميع نتائج امتحان معين
+    const deleteAllExamResults = async () => {
+      const exam = examsStore.exams.find(
+        (e) =>
+          e.id === selectedExam.value || e.firebaseKey === selectedExam.value
+      );
+      const examTitle = exam?.title || "هذا الامتحان";
+
+      if (
+        !confirm(
+          `هل أنت متأكد من حذف جميع نتائج "${examTitle}"؟ لا يمكن التراجع عن هذا الإجراء.`
+        )
+      )
+        return;
+
+      isDeleting.value = true;
+      try {
+        await examsStore.deleteResultsByExam(selectedExam.value);
+        selectedExam.value = "";
+      } catch (error) {
+        alert("حدث خطأ أثناء حذف النتائج");
+      } finally {
+        isDeleting.value = false;
+      }
+    };
+
     return {
       examsStore,
       selectedExam,
@@ -161,7 +237,39 @@ export default {
       highestScore,
       getScoreBadgeClass,
       formatDate,
+      deleteResult,
+      deleteAllExamResults,
+      isDeleting,
     };
   },
 };
 </script>
+
+<style scoped>
+.page-title {
+  font-weight: 700;
+}
+
+.email-cell {
+  font-size: 0.85rem;
+  color: var(--gray);
+}
+
+.date-cell {
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.btn-outline-danger {
+  transition: all 0.2s ease;
+}
+
+.btn-outline-danger:hover:not(:disabled) {
+  transform: scale(1.05);
+}
+
+.btn-outline-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+</style>

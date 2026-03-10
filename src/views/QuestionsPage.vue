@@ -352,6 +352,26 @@ export default {
 
     const isSaving = ref(false);
 
+    const closeModal = () => {
+      const modalEl = document.getElementById("questionModal");
+      if (modalEl) {
+        const bootstrapModal = bootstrap.Modal.getInstance(modalEl);
+        if (bootstrapModal) {
+          bootstrapModal.hide();
+        }
+        // إزالة backdrop يدوياً إذا بقي
+        setTimeout(() => {
+          const backdrop = document.querySelector(".modal-backdrop");
+          if (backdrop) {
+            backdrop.remove();
+          }
+          document.body.classList.remove("modal-open");
+          document.body.style.overflow = "";
+          document.body.style.paddingRight = "";
+        }, 300);
+      }
+    };
+
     const saveQuestion = async () => {
       if (isSaving.value) return;
       isSaving.value = true;
@@ -379,16 +399,8 @@ export default {
           await questionsStore.addQuestion(questionData);
         }
 
-        // إغلاق Modal أولاً
-        try {
-          const modal = document.getElementById("questionModal");
-          const bootstrapModal = bootstrap.Modal.getInstance(modal);
-          if (bootstrapModal) {
-            bootstrapModal.hide();
-          }
-        } catch (modalError) {
-          // تجاهل أخطاء الـ Modal
-        }
+        // إغلاق Modal
+        closeModal();
 
         // ثم إعادة تعيين النموذج
         resetForm();
