@@ -147,86 +147,145 @@ export default {
 
 <style scoped>
 .navbar-custom {
-  background: linear-gradient(135deg, #4361ee 0%, #3f37c9 100%);
-  padding: 12px 0;
-  box-shadow: 0 4px 20px rgba(67, 97, 238, 0.3);
+  background: linear-gradient(160deg, #0f172a 0%, #1e293b 100%);
+  padding: 14px 0;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  position: relative;
+}
+
+.navbar-custom::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(59, 130, 246, 0.5),
+    transparent
+  );
 }
 
 .navbar-brand {
   color: white !important;
-  font-weight: 700;
-  font-size: 1.4rem;
+  font-weight: 800;
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.navbar-brand i {
+  color: #3b82f6;
+  filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.5));
 }
 
 .navbar-toggler {
-  border-color: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.2);
+  padding: 8px 12px;
 }
 
 .navbar-toggler-icon {
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.8%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.9%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
 }
 
 .nav-link {
-  color: rgba(255, 255, 255, 0.9) !important;
-  font-weight: 500;
-  padding: 10px 16px !important;
-  border-radius: 8px;
-  margin: 0 2px;
-  transition: all 0.3s ease;
+  color: rgba(255, 255, 255, 0.85) !important;
+  font-weight: 600;
+  padding: 12px 18px !important;
+  border-radius: 10px;
+  margin: 0 3px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
 }
 
-.nav-link:hover,
+.nav-link:hover {
+  color: white !important;
+  background: rgba(59, 130, 246, 0.15);
+}
+
 .nav-link.router-link-active {
   color: white !important;
-  background: rgba(255, 255, 255, 0.2);
+  background: linear-gradient(
+    145deg,
+    rgba(59, 130, 246, 0.2) 0%,
+    rgba(59, 130, 246, 0.1) 100%
+  );
+  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.3);
 }
 
 .user-info {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   color: white;
+  padding: 6px 8px 6px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .user-avatar {
-  width: 42px;
-  height: 42px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(145deg, #3b82f6 0%, #1d4ed8 100%);
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.2rem;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
 .user-avatar.admin-avatar {
-  background: linear-gradient(135deg, #ffd166 0%, #f4a261 100%);
-  color: #1a1a2e;
+  background: linear-gradient(145deg, #f59e0b 0%, #d97706 100%);
+  color: #0f172a;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
 }
 
 .user-details {
   display: flex;
   flex-direction: column;
-  line-height: 1.3;
+  line-height: 1.35;
 }
 
 .user-name {
-  font-weight: 600;
+  font-weight: 700;
   font-size: 0.95rem;
 }
 
 .user-role {
   font-size: 0.75rem;
-  opacity: 0.8;
+  opacity: 0.7;
+  color: #94a3b8;
+}
+
+.btn-outline-light {
+  border-radius: 10px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.25s ease;
+}
+
+.btn-outline-light:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
 }
 
 @media (max-width: 991px) {
   .user-info {
-    margin-top: 15px;
-    padding-top: 15px;
-    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    margin-top: 18px;
+    padding: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
     width: 100%;
     justify-content: center;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 14px;
   }
 }
 </style>

@@ -325,14 +325,47 @@ export default {
 
 <style scoped>
 .welcome-card {
-  background: linear-gradient(135deg, #4361ee 0%, #3f37c9 100%);
-  border-radius: 20px;
-  padding: 30px;
+  background: linear-gradient(160deg, #0f172a 0%, #1e293b 100%);
+  border-radius: 24px;
+  padding: 34px;
   color: white;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 10px 40px rgba(67, 97, 238, 0.3);
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.25);
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.welcome-card::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(
+    circle,
+    rgba(59, 130, 246, 0.15) 0%,
+    transparent 70%
+  );
+  border-radius: 50%;
+}
+
+.welcome-card::after {
+  content: "";
+  position: absolute;
+  bottom: -30%;
+  left: -10%;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(
+    circle,
+    rgba(16, 185, 129, 0.1) 0%,
+    transparent 70%
+  );
+  border-radius: 50%;
 }
 
 .welcome-content {
@@ -342,14 +375,17 @@ export default {
 }
 
 .welcome-icon {
-  width: 70px;
-  height: 70px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 18px;
+  width: 75px;
+  height: 75px;
+  background: linear-gradient(145deg, #3b82f6 0%, #1d4ed8 100%);
+  border-radius: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2rem;
+  font-size: 2.2rem;
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+  position: relative;
+  z-index: 1;
 }
 
 .welcome-text h2 {
@@ -392,25 +428,42 @@ export default {
 
 .section-card {
   background: white;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  border-radius: 20px;
+  box-shadow: 0 4px 24px rgba(15, 23, 42, 0.06);
   overflow: hidden;
+  border: 1px solid rgba(226, 232, 240, 0.8);
 }
 
 .section-card .card-header {
-  background: linear-gradient(135deg, #4361ee 0%, #3f37c9 100%);
+  background: linear-gradient(160deg, #0f172a 0%, #1e293b 100%);
   color: white;
-  padding: 18px 24px;
+  padding: 20px 26px;
   border: none;
+  position: relative;
+}
+
+.section-card .card-header::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(59, 130, 246, 0.4),
+    transparent
+  );
 }
 
 .section-card .card-header h5 {
   margin: 0;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .section-card .card-body {
-  padding: 24px;
+  padding: 26px;
 }
 
 .empty-state {
@@ -453,9 +506,9 @@ export default {
 }
 
 .exam-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-  border-color: #4361ee;
+  transform: translateY(-6px);
+  box-shadow: 0 12px 35px rgba(15, 23, 42, 0.12);
+  border-color: #3b82f6;
 }
 
 .exam-card.completed {
@@ -537,16 +590,17 @@ export default {
 }
 
 .exam-icon {
-  width: 55px;
-  height: 55px;
-  background: linear-gradient(135deg, #4361ee 0%, #3f37c9 100%);
-  border-radius: 14px;
+  width: 58px;
+  height: 58px;
+  background: linear-gradient(145deg, #3b82f6 0%, #1d4ed8 100%);
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.5rem;
+  font-size: 1.6rem;
   color: white;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
+  box-shadow: 0 6px 18px rgba(59, 130, 246, 0.35);
 }
 
 .exam-title {
@@ -599,21 +653,22 @@ export default {
 .btn-start-exam {
   display: block;
   width: 100%;
-  padding: 12px;
-  background: linear-gradient(135deg, #4361ee 0%, #3f37c9 100%);
+  padding: 14px;
+  background: linear-gradient(145deg, #3b82f6 0%, #1d4ed8 100%);
   color: white;
   border: none;
-  border-radius: 10px;
-  font-weight: 600;
+  border-radius: 12px;
+  font-weight: 700;
   text-align: center;
   text-decoration: none;
-  margin-top: 15px;
-  transition: all 0.3s ease;
+  margin-top: 16px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
 }
 
 .btn-start-exam:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 20px rgba(67, 97, 238, 0.4);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.45);
   color: white;
 }
 
