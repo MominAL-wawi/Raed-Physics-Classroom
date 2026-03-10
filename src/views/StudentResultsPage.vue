@@ -103,6 +103,7 @@
                     {{ getPerformanceText(result.score) }}
                   </span>
                   <router-link
+                    v-if="isReviewAllowed(result.examId)"
                     :to="`/student/results/review/${
                       result.firebaseKey || result.id
                     }`"
@@ -111,6 +112,10 @@
                     <i class="bi bi-eye me-1"></i>
                     مراجعة الإجابات
                   </router-link>
+                  <span v-else class="review-disabled">
+                    <i class="bi bi-eye-slash me-1"></i>
+                    المراجعة غير متاحة
+                  </span>
                 </div>
               </div>
             </div>
@@ -134,7 +139,7 @@ export default {
 
     // تحميل البيانات من Firebase عند تحميل الصفحة
     onMounted(async () => {
-      await examsStore.loadResults();
+      await Promise.all([examsStore.loadExams(), examsStore.loadResults()]);
     });
 
     const myResults = computed(() => {
@@ -190,6 +195,14 @@ export default {
       return "يحتاج تحسين";
     };
 
+    // التحقق من إتاحة المراجعة للامتحان
+    const isReviewAllowed = (examId) => {
+      const exam = examsStore.exams.find(
+        (e) => e.firebaseKey === examId || e.id === examId
+      );
+      return exam?.allowReview === true;
+    };
+
     return {
       myResults,
       averageScore,
@@ -199,6 +212,7 @@ export default {
       getProgressClass,
       getPerformanceBadge,
       getPerformanceText,
+      isReviewAllowed,
     };
   },
 };
@@ -251,5 +265,16 @@ export default {
 
 .result-badge.poor {
   background: linear-gradient(135deg, #ef476f 0%, #d63031 100%);
+}
+
+.review-disabled {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(108, 117, 125, 0.1);
+  color: #6c757d;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 0.82rem;
+  font-weight: 500;
 }
 </style>

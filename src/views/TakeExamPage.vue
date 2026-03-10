@@ -1,5 +1,5 @@
 <template>
-  <div class="dashboard-container">
+  <div class="dashboard-container exam-secure-container">
     <div class="container">
       <!-- رأس الامتحان -->
       <div class="exam-header">
@@ -25,6 +25,27 @@
           >تنبيه: إذا غادرت الصفحة، سيستمر العد التنازلي وستتمكن من الاستكمال
           عند العودة</span
         >
+      </div>
+
+      <!-- تحذير انقطاع الاتصال -->
+      <div
+        v-if="isOffline"
+        class="alert alert-info d-flex align-items-center mb-4"
+      >
+        <i class="bi bi-wifi-off me-2"></i>
+        <span
+          >أنت غير متصل بالإنترنت. لا تقلق! إجاباتك محفوظة محلياً وسيتم إرسالها
+          عند عودة الاتصال.</span
+        >
+      </div>
+
+      <!-- تحذير في حالة وجود نتيجة معلقة -->
+      <div
+        v-if="hasPendingSubmission"
+        class="alert alert-success d-flex align-items-center mb-4"
+      >
+        <i class="bi bi-cloud-arrow-up me-2"></i>
+        <span>جاري إرسال النتيجة المعلقة...</span>
       </div>
 
       <!-- شريط التقدم -->
@@ -225,6 +246,8 @@ export default {
     const showLeaveWarning = ref(false);
     const isSubmitting = ref(false);
     const submitError = ref(null);
+    const isOffline = ref(!navigator.onLine);
+    const hasPendingSubmission = ref(false);
 
     const currentQuestion = computed(
       () => questions.value[currentQuestionIndex.value]
@@ -263,15 +286,57 @@ export default {
       return "تحتاج للمزيد من المذاكرة";
     });
 
-    // حفظ محلي فقط بدون Firebase - لا نرسل طلب عند كل إجابة
+    // حفظ محلي + localStorage للعمل أوفلاين
     const selectAnswer = (answer) => {
       answers.value[currentQuestion.value.id] = answer;
-      // تحديث الـ store محلياً فقط
+      // تحديث الـ store محلياً
       const examId = exam.value.firebaseKey || exam.value.id;
       const key = `${examId}_${authStore.user.email}`;
       if (examsStore.ongoingExams[key]) {
         examsStore.ongoingExams[key].answers[currentQuestion.value.id] = answer;
       }
+      // حفظ في localStorage للعمل أوفلاين
+      saveExamStateToLocal();
+    };
+
+    // حفظ حالة الامتحان محلياً
+    const saveExamStateToLocal = () => {
+      const examId = exam.value?.firebaseKey || exam.value?.id;
+      if (!examId) return;
+
+      const localState = {
+        examId,
+        studentEmail: authStore.user.email,
+        questions: questions.value,
+        answers: answers.value,
+        currentQuestionIndex: currentQuestionIndex.value,
+        startTime: exam.value.startTime || Date.now(),
+        totalDuration: exam.value.duration * 60,
+        savedAt: Date.now(),
+      };
+      localStorage.setItem(
+        `exam_${examId}_${authStore.user.email}`,
+        JSON.stringify(localState)
+      );
+    };
+
+    // تحميل حالة الامتحان من localStorage
+    const loadExamStateFromLocal = (examId) => {
+      const key = `exam_${examId}_${authStore.user.email}`;
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch {
+          return null;
+        }
+      }
+      return null;
+    };
+
+    // حذف حالة الامتحان المحلية
+    const clearLocalExamState = (examId) => {
+      localStorage.removeItem(`exam_${examId}_${authStore.user.email}`);
     };
 
     const nextQuestion = () => {
@@ -316,24 +381,42 @@ export default {
 
       calculateScore();
 
+      const resultData = {
+        examId: exam.value.firebaseKey || exam.value.id,
+        examTitle: exam.value.title,
+        studentEmail: authStore.user.email,
+        studentName: authStore.user.name,
+        answers: answers.value,
+        score: score.value,
+        correctAnswers: correctAnswers.value,
+        totalQuestions: questions.value.length,
+      };
+
+      // حفظ النتيجة محلياً أولاً (للحماية من انقطاع الاتصال)
+      savePendingSubmission(resultData);
+
       try {
-        // حفظ النتيجة
-        await examsStore.submitExamResult({
-          examId: exam.value.firebaseKey || exam.value.id,
-          examTitle: exam.value.title,
-          studentEmail: authStore.user.email,
-          studentName: authStore.user.name,
-          answers: answers.value,
-          score: score.value,
-          correctAnswers: correctAnswers.value,
-          totalQuestions: questions.value.length,
-        });
+        // محاولة إرسال النتيجة
+        await examsStore.submitExamResult(resultData);
+
+        // نجح الإرسال - حذف البيانات المحلية
+        clearPendingSubmission();
+        clearLocalExamState(resultData.examId);
 
         // عرض النتيجة بعد نجاح الحفظ
         showResultModal();
       } catch (error) {
         console.error("Error submitting exam:", error);
         submitError.value = error.message;
+
+        // إذا كان أوفلاين، نعرض النتيجة ونحفظ محلياً
+        if (!navigator.onLine) {
+          alert(
+            "أنت غير متصل بالإنترنت. تم حفظ نتيج��ك محلياً وسيتم إرسالها تلقائياً عند عودة الاتصال."
+          );
+          showResultModal();
+          return;
+        }
 
         // إعادة المحاولة (بحد أقصى 3 مرات)
         if (retryCount < 3) {
@@ -343,11 +426,52 @@ export default {
         } else {
           // فشل نهائي - عرض النتيجة على أي حال مع رسالة خطأ
           alert(
-            "حدث خطأ أثناء حفظ النتيجة في السيرفر، لكن سيتم عرض نتيجتك. يرجى التواصل مع المعلم."
+            "حدث خطأ أثناء حفظ النتيجة في السيرفر. تم حفظها محلياً وسيتم إرسالها عند عودة الاتصال."
           );
           showResultModal();
         }
       }
+    };
+
+    // حفظ النتيجة المعلقة في localStorage
+    const savePendingSubmission = (resultData) => {
+      localStorage.setItem(
+        `pending_result_${resultData.examId}_${resultData.studentEmail}`,
+        JSON.stringify({ ...resultData, savedAt: Date.now() })
+      );
+    };
+
+    // حذف النتيجة المعلقة
+    const clearPendingSubmission = () => {
+      const examId = exam.value?.firebaseKey || exam.value?.id;
+      if (examId) {
+        localStorage.removeItem(
+          `pending_result_${examId}_${authStore.user.email}`
+        );
+      }
+    };
+
+    // محاولة إرسال النتائج المعلقة
+    const syncPendingSubmissions = async () => {
+      const keys = Object.keys(localStorage).filter((k) =>
+        k.startsWith("pending_result_")
+      );
+
+      for (const key of keys) {
+        try {
+          const data = JSON.parse(localStorage.getItem(key));
+          if (data && data.studentEmail === authStore.user.email) {
+            hasPendingSubmission.value = true;
+            await examsStore.submitExamResult(data);
+            localStorage.removeItem(key);
+            // حذف حالة الامتحان المحلية أيضاً
+            clearLocalExamState(data.examId);
+          }
+        } catch (error) {
+          console.error("Error syncing pending submission:", error);
+        }
+      }
+      hasPendingSubmission.value = false;
     };
 
     const showResultModal = () => {
@@ -429,10 +553,12 @@ export default {
     // عند تغيير الرؤية (مغادرة/عودة للصفحة)
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        // المستخدم غادر الصفحة - إظهار تحذير عند العودة
+        // المستخدم غادر الصفحة - حفظ الحالة فقط بدون تسليم
+        saveExamStateToLocal();
         showLeaveWarning.value = true;
       } else {
-        // المستخدم عاد - إعادة حساب الوقت المتبقي
+        // المستخدم عاد - استمرار الامتحان بشكل طبيعي
+        // لا نسلم الامتحان تلقائياً، فقط نحدث الوقت المتبقي
         const examId = route.params.id;
         const ongoingData = examsStore.startOrResumeExam(
           examId,
@@ -440,28 +566,133 @@ export default {
         );
         if (ongoingData && !ongoingData.expired) {
           timeRemaining.value = ongoingData.timeRemaining;
-        } else if (ongoingData && ongoingData.expired) {
-          // انتهى الوقت أثناء الغياب
-          timeRemaining.value = 0;
-          submitExam();
         }
+        // لا نسلم حتى لو انتهى الوقت أثناء الغياب - المؤقت سيتعامل معه
       }
     };
 
     // حفظ الحالة قبل المغادرة
     const handleBeforeUnload = (e) => {
       if (questions.value.length > 0 && timeRemaining.value > 0) {
+        // حفظ الحالة محلياً قبل المغادرة
+        saveExamStateToLocal();
         e.preventDefault();
         e.returnValue = "لديك امتحان جارٍ. هل أنت متأكد من المغادرة؟";
         return e.returnValue;
       }
     };
 
+    // مراقبة حالة الاتصال
+    const handleOnline = () => {
+      isOffline.value = false;
+      // محاولة إرسال النتائج المعلقة عند عودة الاتصال
+      syncPendingSubmissions();
+    };
+
+    const handleOffline = () => {
+      isOffline.value = true;
+    };
+
+    // منع تصوير الشاشة وتسجيل الفيديو
+    const preventScreenCapture = () => {
+      // منع النسخ
+      document.addEventListener("copy", (e) => {
+        if (questions.value.length > 0) {
+          e.preventDefault();
+        }
+      });
+
+      // منع النقر بالزر الأيمن
+      document.addEventListener("contextmenu", (e) => {
+        if (questions.value.length > 0) {
+          e.preventDefault();
+        }
+      });
+
+      // منع اختصارات لوحة المفاتيح للتصوير
+      document.addEventListener("keydown", (e) => {
+        if (questions.value.length > 0) {
+          // منع Print Screen
+          if (e.key === "PrintScreen") {
+            e.preventDefault();
+            alert("تصوير الشاشة غير مسموح أثناء الامتحان");
+          }
+          // منع Ctrl+P (طباعة)
+          if (e.ctrlKey && e.key === "p") {
+            e.preventDefault();
+          }
+          // منع Ctrl+Shift+S (لقطة شاشة في بعض المتصفحات)
+          if (e.ctrlKey && e.shiftKey && e.key === "s") {
+            e.preventDefault();
+          }
+          // منع Cmd+Shift+3 و Cmd+Shift+4 (Mac screenshots)
+          if (e.metaKey && e.shiftKey && (e.key === "3" || e.key === "4")) {
+            e.preventDefault();
+          }
+        }
+      });
+
+      // الكشف عن مشاركة الشاشة (Screen Sharing Detection)
+      if (navigator.mediaDevices) {
+        navigator.mediaDevices.addEventListener("devicechange", () => {
+          // تم تغيير الأجهزة - قد يكون هناك مشاركة شاشة
+          console.log("Device change detected");
+        });
+      }
+    };
+
     onMounted(async () => {
       const examId = route.params.id;
 
-      // تحميل الامتحانات والنتائج من Firebase
-      await Promise.all([examsStore.loadExams(), examsStore.loadResults()]);
+      // إضافة مستمعات حالة الاتصال
+      window.addEventListener("online", handleOnline);
+      window.addEventListener("offline", handleOffline);
+
+      // تفعيل حماية تصوير الشاشة
+      preventScreenCapture();
+
+      // محاولة إرسال النتائج المعلقة عند بدء التطبيق
+      if (navigator.onLine) {
+        syncPendingSubmissions();
+      }
+
+      // التحقق من وجود حالة محفوظة محلياً أولاً (للعمل أوفلاين)
+      const localState = loadExamStateFromLocal(examId);
+
+      try {
+        // محاولة تحميل الامتحانات والنتائج من Firebase
+        await Promise.all([examsStore.loadExams(), examsStore.loadResults()]);
+      } catch (error) {
+        console.error("Error loading from Firebase:", error);
+        // إذا فشل التحميل وكان هناك حالة محلية، نستخدمها
+        if (localState && !navigator.onLine) {
+          exam.value = {
+            firebaseKey: localState.examId,
+            id: localState.examId,
+            duration: localState.totalDuration / 60,
+            title: "امتحان (وضع أوفلاين)",
+          };
+          questions.value = localState.questions;
+          answers.value = localState.answers || {};
+          currentQuestionIndex.value = localState.currentQuestionIndex || 0;
+
+          const elapsedSeconds = Math.floor(
+            (Date.now() - localState.savedAt) / 1000
+          );
+          const remaining = localState.totalDuration - elapsedSeconds;
+          timeRemaining.value = remaining > 0 ? remaining : 0;
+
+          if (timeRemaining.value <= 0) {
+            submitExam();
+            return;
+          }
+
+          startTimer();
+          document.addEventListener("visibilitychange", handleVisibilityChange);
+          window.addEventListener("beforeunload", handleBeforeUnload);
+          return;
+        }
+      }
 
       exam.value = examsStore.getExamById(examId);
 
@@ -492,14 +723,28 @@ export default {
         return;
       }
 
-      // استعادة حالة الامتحان
-      questions.value = ongoingData.questions;
-      answers.value = ongoingData.answers || {};
-      currentQuestionIndex.value = ongoingData.currentQuestionIndex || 0;
-      timeRemaining.value = ongoingData.timeRemaining;
+      // استعادة حالة الامتحان (نفضل الحالة المحلية إذا كانت أحدث)
+      if (localState && localState.savedAt > ongoingData.startTime) {
+        questions.value = localState.questions;
+        answers.value = localState.answers || {};
+        currentQuestionIndex.value = localState.currentQuestionIndex || 0;
+
+        const elapsedSeconds = Math.floor(
+          (Date.now() - localState.savedAt) / 1000
+        );
+        const savedRemaining =
+          localState.totalDuration -
+          Math.floor((localState.savedAt - ongoingData.startTime) / 1000);
+        timeRemaining.value = Math.max(savedRemaining - elapsedSeconds, 0);
+      } else {
+        questions.value = ongoingData.questions;
+        answers.value = ongoingData.answers || {};
+        currentQuestionIndex.value = ongoingData.currentQuestionIndex || 0;
+        timeRemaining.value = ongoingData.timeRemaining;
+      }
 
       // إذا كان هناك امتحان سابق، أظهر تحذير
-      if (Object.keys(ongoingData.answers).length > 0) {
+      if (Object.keys(answers.value).length > 0) {
         showLeaveWarning.value = true;
         setTimeout(() => {
           showLeaveWarning.value = false;
@@ -517,9 +762,15 @@ export default {
       if (timerInterval.value) {
         clearInterval(timerInterval.value);
       }
-      // إزالة مستمعا�� الأحداث
+      // حفظ الحالة قبل المغادرة
+      if (questions.value.length > 0 && timeRemaining.value > 0) {
+        saveExamStateToLocal();
+      }
+      // إزالة مستمعات الأحداث
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
     });
 
     return {
@@ -536,6 +787,8 @@ export default {
       resultClass,
       resultMessage,
       showLeaveWarning,
+      isOffline,
+      hasPendingSubmission,
       selectAnswer,
       nextQuestion,
       previousQuestion,
@@ -756,5 +1009,25 @@ export default {
   transform: translateY(-2px);
   box-shadow: 0 5px 20px rgba(40, 167, 69, 0.4);
   color: white;
+}
+
+/* حماية من تصوير الشاشة */
+.exam-secure-container {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* CSS لمنع التقاط الشاشة (يعمل على بعض المتصفحات) */
+@media print {
+  .exam-secure-container {
+    display: none !important;
+  }
+}
+
+/* إخفاء المحتوى عند محاولة التسجيل (Picture-in-Picture) */
+.exam-secure-container:fullscreen {
+  background: black;
 }
 </style>

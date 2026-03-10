@@ -145,6 +145,34 @@ export const useExamsStore = defineStore("exams", {
       return false;
     },
 
+    // تبديل حالة إظهار/إخفاء المراجعة
+    async toggleReviewVisibility(firebaseKey) {
+      const exam = this.exams.find((e) => e.firebaseKey === firebaseKey);
+      if (exam) {
+        const newStatus = !exam.allowReview;
+        await this.updateExam(firebaseKey, { allowReview: newStatus });
+        return true;
+      }
+      return false;
+    },
+
+    // إعادة الامتحان لطالب معين (حذف نتيجته)
+    async resetExamForStudent(examId, studentEmail) {
+      try {
+        const result = this.results.find(
+          (r) => r.examId === examId && r.studentEmail === studentEmail
+        );
+        if (result && result.firebaseKey) {
+          await this.deleteResult(result.firebaseKey);
+          return true;
+        }
+        return false;
+      } catch (error) {
+        console.error("Error resetting exam for student:", error);
+        throw error;
+      }
+    },
+
     async deleteExam(firebaseKey) {
       try {
         await firebaseDB.delete(DB_PATHS.EXAMS, firebaseKey);

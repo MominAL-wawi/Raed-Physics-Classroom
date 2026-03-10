@@ -67,9 +67,22 @@
               >
             </div>
 
+            <!-- حالة المراجعة -->
+            <div class="exam-review-status mt-2">
+              <span
+                class="badge"
+                :class="exam.allowReview ? 'bg-info' : 'bg-secondary'"
+              >
+                <i
+                  :class="exam.allowReview ? 'bi bi-eye' : 'bi bi-eye-slash'"
+                ></i>
+                {{ exam.allowReview ? "المراجعة مفعّلة" : "المراجعة معطّلة" }}
+              </span>
+            </div>
+
             <hr />
 
-            <div class="d-flex gap-2">
+            <div class="d-flex gap-2 flex-wrap">
               <button
                 class="btn btn-sm"
                 :class="exam.isActive ? 'btn-warning' : 'btn-success'"
@@ -77,6 +90,16 @@
               >
                 <i :class="exam.isActive ? 'bi bi-pause' : 'bi bi-play'"></i>
                 {{ exam.isActive ? "تعطيل" : "تفعيل" }}
+              </button>
+              <button
+                class="btn btn-sm"
+                :class="exam.allowReview ? 'btn-secondary' : 'btn-info'"
+                @click="toggleReviewVisibility(exam.firebaseKey)"
+              >
+                <i
+                  :class="exam.allowReview ? 'bi bi-eye-slash' : 'bi bi-eye'"
+                ></i>
+                {{ exam.allowReview ? "إخفاء المراجعة" : "إظهار المراجعة" }}
               </button>
               <button
                 class="btn btn-sm btn-outline-danger"
@@ -118,6 +141,10 @@ export default {
       await examsStore.toggleExamStatus(firebaseKey);
     };
 
+    const toggleReviewVisibility = async (firebaseKey) => {
+      await examsStore.toggleReviewVisibility(firebaseKey);
+    };
+
     const deleteExam = async (firebaseKey) => {
       if (confirm("هل أنت متأكد من حذف هذا الامتحان؟")) {
         await examsStore.deleteExam(firebaseKey);
@@ -129,6 +156,7 @@ export default {
       formatDate,
       getExamResults,
       toggleExamStatus,
+      toggleReviewVisibility,
       deleteExam,
     };
   },

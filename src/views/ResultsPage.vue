@@ -90,14 +90,24 @@
                     {{ formatDate(result.submittedAt) }}
                   </td>
                   <td>
-                    <button
-                      class="btn btn-sm btn-outline-danger"
-                      @click="deleteResult(result)"
-                      :disabled="isDeleting"
-                      title="حذف النتيجة"
-                    >
-                      <i class="bi bi-trash"></i>
-                    </button>
+                    <div class="btn-group btn-group-sm">
+                      <button
+                        class="btn btn-outline-primary"
+                        @click="resetExamForStudent(result)"
+                        :disabled="isDeleting"
+                        title="إعادة الامتحان للطالب"
+                      >
+                        <i class="bi bi-arrow-repeat"></i>
+                      </button>
+                      <button
+                        class="btn btn-outline-danger"
+                        @click="deleteResult(result)"
+                        :disabled="isDeleting"
+                        title="حذف النتيجة"
+                      >
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               </tbody>
@@ -203,6 +213,29 @@ export default {
       }
     };
 
+    // إعادة الامتحان لطالب معين
+    const resetExamForStudent = async (result) => {
+      if (
+        !confirm(
+          `هل أنت متأكد من إعادة الامتحان للطالب ${result.studentName}؟\nسيتم حذف نتيجته الحالية وسيتمكن من إعادة الامتحان.`
+        )
+      )
+        return;
+
+      isDeleting.value = true;
+      try {
+        await examsStore.resetExamForStudent(
+          result.examId,
+          result.studentEmail
+        );
+        alert(`تم إعادة الامتحان للطالب ${result.studentName} بنجاح`);
+      } catch (error) {
+        alert("حدث خطأ أثناء إعادة الامتحان");
+      } finally {
+        isDeleting.value = false;
+      }
+    };
+
     // حذف جميع نتائج امتحان معين
     const deleteAllExamResults = async () => {
       const exam = examsStore.exams.find(
@@ -238,6 +271,7 @@ export default {
       getScoreBadgeClass,
       formatDate,
       deleteResult,
+      resetExamForStudent,
       deleteAllExamResults,
       isDeleting,
     };
