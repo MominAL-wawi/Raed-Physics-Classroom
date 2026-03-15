@@ -63,9 +63,20 @@
 
       <!-- السؤال الحالي -->
       <div v-if="currentQuestion" class="exam-question">
-        <div class="question-number">{{ currentQuestionIndex + 1 }}</div>
+        <div class="d-flex justify-content-between align-items-start">
+          <div class="question-number">{{ currentQuestionIndex + 1 }}</div>
+          <button
+            class="btn btn-sm"
+            :class="flaggedQuestions[currentQuestion.id] ? 'btn-warning' : 'btn-outline-warning'"
+            @click="toggleFlag(currentQuestion.id)"
+            :title="flaggedQuestions[currentQuestion.id] ? 'إزالة العلامة' : 'وضع علامة للمراجعة'"
+          >
+            <i class="bi" :class="flaggedQuestions[currentQuestion.id] ? 'bi-flag-fill' : 'bi-flag'"></i>
+            <span class="ms-1 d-none d-sm-inline">{{ flaggedQuestions[currentQuestion.id] ? 'مُعلَّم' : 'علّم للمراجعة' }}</span>
+          </button>
+        </div>
 
-        <h5>{{ currentQuestion.text }}</h5>
+        <h5 class="mt-2">{{ currentQuestion.text }}</h5>
 
         <img
           v-if="currentQuestion.image"
@@ -174,24 +185,44 @@
 
       <!-- نظرة عامة على الأسئلة -->
       <div class="section-card mt-4">
-        <div class="card-header">
+        <div class="card-header d-flex justify-content-between align-items-center">
           <h6 class="mb-0">نظرة عامة على الأسئلة</h6>
+          <div class="d-flex align-items-center gap-3 small">
+            <span><span class="badge bg-success me-1">&nbsp;</span> تمت الإجابة</span>
+            <span><span class="badge bg-warning me-1">&nbsp;</span> مُعلَّم للمراجعة</span>
+            <span><span class="badge bg-secondary me-1">&nbsp;</span> لم يُجب</span>
+          </div>
         </div>
         <div class="card-body">
           <div class="d-flex flex-wrap gap-2">
             <button
               v-for="(q, index) in questions"
               :key="q.id"
-              class="btn btn-sm"
+              class="btn btn-sm position-relative"
               :class="{
-                'btn-success': answers[q.id],
-                'btn-outline-secondary': !answers[q.id],
+                'btn-success': answers[q.id] && !flaggedQuestions[q.id],
+                'btn-warning': flaggedQuestions[q.id],
+                'btn-outline-secondary': !answers[q.id] && !flaggedQuestions[q.id],
                 'btn-primary': index === currentQuestionIndex,
               }"
               @click="goToQuestion(index)"
             >
               {{ index + 1 }}
+              <i v-if="flaggedQuestions[q.id]" class="bi bi-flag-fill position-absolute" style="top: -5px; right: -5px; font-size: 10px;"></i>
             </button>
+          </div>
+          <!-- زر الانتقال السريع للأسئلة المُعلَّمة -->
+          <div v-if="flaggedCount > 0" class="mt-3 pt-3 border-top">
+            <div class="d-flex align-items-center justify-content-between">
+              <span class="text-warning">
+                <i class="bi bi-flag-fill me-1"></i>
+                {{ flaggedCount }} سؤال مُعلَّم للمراجعة
+              </span>
+              <button class="btn btn-warning btn-sm" @click="goToNextFlagged">
+                <i class="bi bi-arrow-left me-1"></i>
+                الانتقال للتالي المُعلَّم
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -244,6 +275,7 @@ export default {
     const questions = ref([]);
     const currentQuestionIndex = ref(0);
     const answers = ref({});
+    const flaggedQuestions = ref({});
     const timeRemaining = ref(0);
     const timerInterval = ref(null);
     const score = ref(0);
@@ -321,6 +353,7 @@ export default {
         studentEmail: authStore.user.email,
         questions: questions.value,
         answers: answers.value,
+        flaggedQuestions: flaggedQuestions.value,
         currentQuestionIndex: currentQuestionIndex.value,
         startTime: exam.value.startTime || Date.now(),
         totalDuration: exam.value.duration * 60,
@@ -365,6 +398,48 @@ export default {
 
     const goToQuestion = (index) => {
       currentQuestionIndex.value = index;
+    };
+
+    // وظائف تعليم الأسئلة (Flag)
+    const toggleFlag = (questionId) => {
+      if (flaggedQuestions.value[questionId]) {
+        delete flaggedQuestions.value[questionId];
+      } else {
+        flaggedQuestions.value[questionId] = true;
+      }
+      saveExamStateToLocal();
+    };
+
+    const flaggedCount = computed(() => {
+      return Object.keys(flaggedQuestions.value).length;
+    });
+
+    const goToNextFlagged = () => {
+      const flaggedIds = Object.keys(flaggedQuestions.value);
+      if (flaggedIds.length === 0) return;
+
+      // البحث عن السؤال المُعلَّم التالي بعد السؤال الحالي
+      const currentId = currentQuestion.value?.id;
+      const currentFlaggedIndex = flaggedIds.indexOf(currentId);
+      
+      // الحصول على فهارس الأسئلة المُعلَّمة
+      const flaggedIndices = questions.value
+        .map((q, idx) => ({ id: q.id, index: idx }))
+        .filter(item => flaggedQuestions.value[item.id])
+        .map(item => item.index);
+
+      // البحث عن الفهرس التالي
+      const currentIdx = currentQuestionIndex.value;
+      let nextFlaggedIdx = flaggedIndices.find(idx => idx > currentIdx);
+      
+      // إذا لم يوجد بعد الحالي، ابدأ من البداية
+      if (nextFlaggedIdx === undefined) {
+        nextFlaggedIdx = flaggedIndices[0];
+      }
+
+      if (nextFlaggedIdx !== undefined) {
+        currentQuestionIndex.value = nextFlaggedIdx;
+      }
     };
 
     const calculateScore = () => {
@@ -476,7 +551,7 @@ export default {
             hasPendingSubmission.value = true;
             await examsStore.submitExamResult(data);
             localStorage.removeItem(key);
-            // حذف حالة الامتحان المحلية أيضاً
+            // حذ�� حالة الامتحان المحلية أيضاً
             clearLocalExamState(data.examId);
           }
         } catch (error) {
@@ -1037,6 +1112,7 @@ export default {
           };
           questions.value = localState.questions;
           answers.value = localState.answers || {};
+          flaggedQuestions.value = localState.flaggedQuestions || {};
           currentQuestionIndex.value = localState.currentQuestionIndex || 0;
 
           const elapsedSeconds = Math.floor(
@@ -1090,6 +1166,7 @@ export default {
       if (localState && localState.savedAt > ongoingData.startTime) {
         questions.value = localState.questions;
         answers.value = localState.answers || {};
+        flaggedQuestions.value = localState.flaggedQuestions || {};
         currentQuestionIndex.value = localState.currentQuestionIndex || 0;
 
         const elapsedSeconds = Math.floor(
@@ -1136,6 +1213,8 @@ export default {
       currentQuestionIndex,
       currentQuestion,
       answers,
+      flaggedQuestions,
+      flaggedCount,
       progressPercentage,
       formattedTime,
       timerClass,
@@ -1153,6 +1232,8 @@ export default {
       nextQuestion,
       previousQuestion,
       goToQuestion,
+      toggleFlag,
+      goToNextFlagged,
       submitExam,
       isSubmitting,
       goToHome,
